@@ -137,3 +137,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+design.txt
+*.pdf
+tkinter_proto2.py
