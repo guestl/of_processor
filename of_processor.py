@@ -1,3 +1,7 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import os
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
@@ -12,6 +16,8 @@ class Application(tk.Frame):
 
         #  content of a data file
         self.readed_lines = []
+        # getting script directory
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
 
         self.create_widgets()
 
@@ -59,7 +65,7 @@ class Application(tk.Frame):
 
         self.listbox.grid(column=1, row=4, columnspan=3, rowspan=4,
                           sticky=(tk.N, tk.S, tk.E, tk.W))
-        self.yscrollbar.grid(column=4, row=4, rowspan=3,
+        self.yscrollbar.grid(column=4, row=4, rowspan=4,
                              sticky=tk.N + tk.S + tk.W)
         self.xscrollbar.grid(column=1, row=8, columnspan=3,
                              sticky=tk.W + tk.E + tk.N)
@@ -72,14 +78,8 @@ class Application(tk.Frame):
         self.findBtn.configure(state='disable')
         self.saveToBtn.configure(state='disable')
 
-
-   #     root.rowconfigure(0, weight=1)
-    #    root.rowconfigure(1, weight=1)
-     #   root.rowconfigure(2, weight=1)
-
-      #  root.columnconfigure(0, weight=1)
-       # root.columnconfigure(1, weight=1)
-        #root.columnconfigure(2, weight=1)
+        root.rowconfigure(7, weight=1)
+        root.columnconfigure(2, weight=1)
 
     def find_text(self):
         text_to_search = self.find_input.get()
@@ -103,7 +103,7 @@ class Application(tk.Frame):
     def open_data_file(self):
         file_name = askopenfilename(filetypes=(("Text files", "*.txt"),
                                                ("Log files", "*.log"),
-                                               ("All files", "*.*")))
+                                               ("All files", "*.*")), initialdir=self.script_dir)
         if file_name:
             try:
                 self.readed_lines = []
@@ -146,7 +146,7 @@ class Application(tk.Frame):
 root = tk.Tk()
 app = Application(master=root)
 
-version = 1
+version = 1.01
 app.master.title("Output files processor application. ver %5.2f" % version)
 
 app.mainloop()
