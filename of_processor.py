@@ -8,10 +8,26 @@ from tkinter.filedialog import asksaveasfilename
 import codecs
 
 
+class StatusBar(tk.Frame):
+    def __init__(self, master=None):
+        tk.Frame.__init__(self, master)
+        self.label_status = tk.Label(self, bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.label_status.grid(row=0, column=0,
+                               sticky=(tk.W, tk.E))
+
+    def set(self, format, *args):
+        self.label_status.config(text=format % args)
+        self.label_status.update_idletasks()
+
+    def clear(self):
+        self.label_status.config(text="")
+        self.label_status.update_idletasks()
+
+
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
-        self.pack()
+        self.grid()
         master.minsize(width=640, height=480)
 
         #  content of a data file
@@ -24,16 +40,17 @@ class Application(tk.Frame):
     def create_widgets(self):
 
         # ***************** search region
-        self.find_lbl = tk.Label(text="Enter piece of text to find:")
-        self.find_input = tk.Entry()
+        self.label_enter_text_to_find = tk.Label(text="Enter text to find:")
+        self.entry_text_to_find = tk.Entry()
         self.findBtn = tk.Button(text="FIND", fg="green",
-                                 command=self.find_text)
+                                 command=self.find_text,
+                                 width=6, height=1)
 
         #  ***************** listbox region
-        self.selected_lbl_caption = "Selected value: "
-        self.selected_lbl = tk.Label(justify=tk.LEFT,
-                                     wraplength=640,
-                                     text=self.selected_lbl_caption)
+        self.label_with_selected_text_caption = "Selected value: "
+        self.label_with_selected_text = tk.Label(justify=tk.LEFT,
+                                                 wraplength=640,
+                                                 text=self.label_with_selected_text_caption)
         self.listbox = tk.Listbox(selectmode=tk.EXTENDED)
         self.yscrollbar = tk.Scrollbar(command=self.listbox.yview,
                                        orient=tk.VERTICAL)
@@ -47,21 +64,30 @@ class Application(tk.Frame):
         self.yscrollbar.config(command=self.listbox.yview)
 
         #  ***************** buttons region
-        self.loadBtn = tk.Button(text="LOAD", fg="green",
-                                 command=self.open_data_file)
-        self.saveToBtn = tk.Button(text="SAVE", fg="blue",
-                                   command=self.save_selection)
-        self.quitBtn = tk.Button(text="QUIT", fg="red",
-                                 command=root.destroy)
+        self.button_load = tk.Button(text="LOAD", fg="green",
+                                     command=self.open_data_file,
+                                     width=6, height=1)
+        self.button_save_to = tk.Button(text="SAVE", fg="blue",
+                                        command=self.save_selection,
+                                        width=6, height=1)
+        self.button_quit = tk.Button(text="QUIT", fg="red",
+                                     command=root.destroy,
+                                     width=6, height=1)
+
+        self.status_bar = StatusBar(self.master)
 
         self.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        self.find_lbl.grid(column=1, row=1, sticky=tk.W)
-        self.find_input.grid(column=2, row=1, columnspan=3, sticky=tk.W + tk.E)
+        self.label_enter_text_to_find.grid(column=1, row=1, sticky=tk.W)
+        self.entry_text_to_find.grid(column=2, row=1, columnspan=3,
+                                     sticky=tk.W + tk.E)
 
-        self.findBtn.grid(column=5, row=1, sticky=tk.W)
+        self.findBtn.grid(column=5, row=1, sticky=tk.W,
+                          padx=3, pady=3)
 
-        self.selected_lbl.grid(column=1, row=2, columnspan=5, rowspan=2, sticky=(tk.N, tk.S, tk.W))
+        self.label_with_selected_text.grid(column=1, row=2,
+                                           columnspan=5, rowspan=2,
+                                           sticky=(tk.N, tk.S, tk.W))
 
         self.listbox.grid(column=1, row=4, columnspan=3, rowspan=4,
                           sticky=(tk.N, tk.S, tk.E, tk.W))
@@ -70,19 +96,24 @@ class Application(tk.Frame):
         self.xscrollbar.grid(column=1, row=8, columnspan=3,
                              sticky=tk.W + tk.E + tk.N)
 
-        self.loadBtn.grid(column=5, row=4, sticky=tk.W + tk.N)
-        self.saveToBtn.grid(column=5, row=5, sticky=tk.W + tk.N)
-        self.quitBtn.grid(column=5, row=6, sticky=tk.W + tk.N)
+        self.button_load.grid(column=5, row=4, sticky=tk.W + tk.N,
+                              padx=3, pady=3)
+        self.button_save_to.grid(column=5, row=5, sticky=tk.W + tk.N,
+                                 padx=3, pady=3)
+        self.button_quit.grid(column=5, row=6, sticky=tk.W + tk.N,
+                              padx=3, pady=3)
 
-        self.find_input.configure(state='disable')
+        self.status_bar.grid(column=1, row=9, columnspan=5, sticky=(tk.W, tk.E))
+
+        self.entry_text_to_find.configure(state='disable')
         self.findBtn.configure(state='disable')
-        self.saveToBtn.configure(state='disable')
+        self.button_save_to.configure(state='disable')
 
         root.rowconfigure(7, weight=1)
         root.columnconfigure(2, weight=1)
 
     def find_text(self):
-        text_to_search = self.find_input.get()
+        text_to_search = self.entry_text_to_find.get()
 
         self.listbox.delete(0, tk.END)
 
@@ -94,16 +125,18 @@ class Application(tk.Frame):
         widg = event.widget
         try:
             index = int(widg.curselection()[0])
-            text = self.selected_lbl_caption + self.listbox.get(index)
+            text = self.listbox.get(index)
         except Exception as e:
-            text = self.selected_lbl_caption
+            text = ''
+        text = self.label_with_selected_text_caption + text
 
-        self.selected_lbl['text'] = text
+        self.label_with_selected_text['text'] = text
 
     def open_data_file(self):
         file_name = askopenfilename(filetypes=(("Text files", "*.txt"),
                                                ("Log files", "*.log"),
-                                               ("All files", "*.*")), initialdir=self.script_dir)
+                                               ("All files", "*.*")),
+                                    initialdir=self.script_dir)
         if file_name:
             try:
                 self.readed_lines = []
@@ -114,10 +147,11 @@ class Application(tk.Frame):
                 for single_line in self.readed_lines:
                     self.listbox.insert(tk.END, single_line)
 
-                self.find_input.configure(state='normal')
+                self.entry_text_to_find.configure(state='normal')
                 self.findBtn.configure(state='normal')
-                self.saveToBtn.configure(state='normal')
+                self.button_save_to.configure(state='normal')
 
+                self.status_bar.set("Loaded %s lines" % len(self.readed_lines))
             except Exception as e:
                 print("Error while opening a file %s" % file_name)
                 raise e
@@ -138,6 +172,7 @@ class Application(tk.Frame):
                 with codecs.open(file_name, "w", "utf-8") as f:
                     for line in selection_list:
                         f.write(line)
+                self.status_bar.set("Saved %s lines" % len(selection_list))
             except Exception as e:
                 print("Error while opening a file %s" % file_name)
                 raise e
