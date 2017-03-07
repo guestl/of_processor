@@ -3,9 +3,12 @@
 
 import os
 import tkinter as tk
+from tkinter.ttk import *
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
 import codecs
+import configparser
+import logging
 
 
 class StatusBar(tk.Frame):
@@ -29,22 +32,33 @@ class Application(tk.Frame):
         super().__init__(master)
         self.grid()
         master.minsize(width=640, height=480)
+        self.menu_bar = tk.Menu(master)
+        master.configure(menu=self.menu_bar)
 
         #  content of a data file
         self.readed_lines = []
         # getting script directory
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.search_tpl_list = []
 
         self.create_widgets()
 
     def create_widgets(self):
+        # ***************** menu
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+
+        self.file_menu.add_command(label="Load conf", command=self.load_config)
+        self.file_menu.add_command(label="Quit", command=root.destroy)
 
         # ***************** search region
+        self.str_var_entry_find = tk.StringVar()
+
         self.label_enter_text_to_find = tk.Label(text="Enter text to find:")
-        self.entry_text_to_find = tk.Entry()
-        self.findBtn = tk.Button(text="FIND", fg="green",
-                                 command=self.find_text,
-                                 width=6, height=1)
+        self.entry_text_to_find = tk.Entry(textvariable=self.str_var_entry_find)
+        self.button_find = tk.Button(text="FIND", fg="green",
+                                     command=self.find_text,
+                                     width=6, height=1)
 
         #  ***************** listbox region
         self.label_with_selected_text_caption = "Selected value: "
@@ -64,6 +78,15 @@ class Application(tk.Frame):
         self.yscrollbar.config(command=self.listbox.yview)
 
         #  ***************** buttons region
+        self.str_var_combobox = tk.StringVar()
+
+        self.combobox_search_tpl = tk.ttk.Combobox(state="readonly",
+                                                   textvariable=self.str_var_combobox,
+                                                   values=self.search_tpl_list)
+
+        self.combobox_search_tpl.bind("<<ComboboxSelected>>",
+                                      self.update_search_entry_on_cmtpl)
+
         self.button_load = tk.Button(text="LOAD", fg="green",
                                      command=self.open_data_file,
                                      width=6, height=1)
@@ -76,14 +99,15 @@ class Application(tk.Frame):
 
         self.status_bar = StatusBar(self.master)
 
+        # ***************** display it all
         self.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         self.label_enter_text_to_find.grid(column=1, row=1, sticky=tk.W)
         self.entry_text_to_find.grid(column=2, row=1, columnspan=3,
                                      sticky=tk.W + tk.E)
 
-        self.findBtn.grid(column=5, row=1, sticky=tk.W,
-                          padx=3, pady=3)
+        self.button_find.grid(column=5, row=1, sticky=tk.W,
+                              padx=3, pady=3)
 
         self.label_with_selected_text.grid(column=1, row=2,
                                            columnspan=5, rowspan=2,
@@ -103,23 +127,37 @@ class Application(tk.Frame):
         self.button_quit.grid(column=5, row=6, sticky=tk.W + tk.N,
                               padx=3, pady=3)
 
-        self.status_bar.grid(column=1, row=9, columnspan=5, sticky=(tk.W, tk.E))
+        self.combobox_search_tpl.grid(column=5, row=7, sticky=tk.W + tk.N,
+                                      padx=3, pady=3)
 
-        self.entry_text_to_find.configure(state='disable')
-        self.findBtn.configure(state='disable')
-        self.button_save_to.configure(state='disable')
+        self.status_bar.grid(column=1, row=9, columnspan=5,
+                             sticky=(tk.W, tk.E))
+
+        self.set_widgets_status('disable', 'disable')
 
         root.rowconfigure(7, weight=1)
         root.columnconfigure(2, weight=1)
+
+    def set_widgets_status(self, status, cb_status):
+        self.entry_text_to_find.configure(state=status)
+        self.button_find.configure(state=status)
+        self.button_save_to.configure(state=status)
+        self.button_find.configure(state=status)
+        self.combobox_search_tpl.configure(state=cb_status)
 
     def find_text(self):
         text_to_search = self.entry_text_to_find.get()
 
         self.listbox.delete(0, tk.END)
 
+        counter = 0
+
         for line in self.readed_lines:
             if text_to_search.lower() in line.lower():
                 self.listbox.insert(tk.END, line)
+                counter += 1
+
+        self.status_bar.set("%s lines was found" % counter)
 
     def on_select(self, event):
         widg = event.widget
@@ -147,9 +185,7 @@ class Application(tk.Frame):
                 for single_line in self.readed_lines:
                     self.listbox.insert(tk.END, single_line)
 
-                self.entry_text_to_find.configure(state='normal')
-                self.findBtn.configure(state='normal')
-                self.button_save_to.configure(state='normal')
+                self.set_widgets_status('normal', 'readonly')
 
                 self.status_bar.set("Loaded %s lines" % len(self.readed_lines))
             except Exception as e:
@@ -177,11 +213,45 @@ class Application(tk.Frame):
                 print("Error while opening a file %s" % file_name)
                 raise e
 
+    def load_config(self):
+        self.search_tpl_list = []
+        config = configparser.ConfigParser()
+
+        conf_file_name = askopenfilename(filetypes=(("Conf files", "*.conf"),
+                                                    ("All files", "*.*")))
+
+        if conf_file_name:
+            try:
+                logging.debug("Opening %s file" % conf_file_name)
+                config.read(conf_file_name)
+            except Exception as e:
+                print("Error reading {} file".format(conf_file_name))
+                logging.error("Error reading %s file" % conf_file_name)
+                raise e
+        try:
+            self.search_tpl_list = config['USER_SETTINGS']['Searches'].split(',')
+        except Exception as e:
+            logging.error("Error reading ['USER_SETTINGS']['Searches']\
+                           in %s file" % conf_file_name)
+            pass
+
+        self.combobox_search_tpl['values'] = self.search_tpl_list
+
+        return self.search_tpl_list
+
+    def update_search_entry_on_cmtpl(self, event):
+        self.str_var_entry_find.set(self.str_var_combobox.get())
+
+
+logging.basicConfig(filename='of_processor.log',
+                    level=logging.ERROR,
+                    format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s')
+
 
 root = tk.Tk()
 app = Application(master=root)
 
-version = 1.01
+version = 1.12
 app.master.title("Output files processor application. ver %5.2f" % version)
 
 app.mainloop()
